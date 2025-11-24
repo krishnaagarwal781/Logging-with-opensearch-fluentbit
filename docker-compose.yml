@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  opensearch-node:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch-node
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=YourStrongPassword123!
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9300:9200"
+      - "9700:9600"
+    networks:
+      - os-net
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: opensearch-dashboards
+    depends_on:
+      - opensearch-node
+    ports:
+      - "5701:5601"
+    networks:
+      - os-net
+    volumes:
+      - ./opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+
+  myapp:
+    build:
+      context: ./myapp
+    container_name: fastapi-app
+    volumes:
+      - ./logs/myapp:/var/log/myapp
+    networks:
+      - os-net
+    # If you want port mapping:
+    ports:
+      - "8000:8000"
+
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: fluent-bit
+    depends_on:
+      - opensearch-node
+      - myapp
+    volumes:
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./logs/myapp:/var/log/myapp
+    networks:
+      - os-net
+volumes:
+  opensearch-data:
+
+networks:
+  os-net:
+    driver: bridge
