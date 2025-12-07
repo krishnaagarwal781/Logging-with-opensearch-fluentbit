@@ -6,3 +6,5 @@ app-logs-requests*
  
 
 Index patterns for dashboard
+
+dummy commit
